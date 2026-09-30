@@ -16,7 +16,7 @@ pub struct HelloPlugin;
 
 impl Plugin for HelloPlugin {
     fn build(&self, app: &mut App) {
-        app.insert_resource(GreetTimer(Timer::from_seconds(2.0, TimerMode::Repeating)));
+        app.insert_resource(GreetTimer(Timer::from_seconds(0.1, TimerMode::Repeating)));
         app.add_systems(Startup, add_cat);
         app.add_systems(Update, (update_people, greet_people).chain());
     }
@@ -34,25 +34,34 @@ fn add_cat(mut commands: Commands, asset_server: Res<AssetServer>) {
             image_mode: SpriteImageMode::Scale(SpriteScalingMode::FitCenter),
             ..Default::default()
         },
+        Transform::from_xyz(0., 0., 0.),
     ));
 }
 
-fn greet_people(
-    time: Res<Time>,
-    mut timer: ResMut<GreetTimer>,
-    mut query: Query<&mut Sprite, With<Cat>>,
-) {
-    if timer.0.tick(time.delta()).just_finished() {
-        for mut sprite in &mut query {
-            sprite.flip_x ^= true;
+fn greet_people(time: Res<Time>, mut query: Query<(&mut Sprite, &mut Transform), With<Cat>>) {
+    for (mut sprite, mut transform) in &mut query {
+        match sprite.flip_x {
+            true => transform.translation.x += 150. * time.delta_secs(),
+            false => transform.translation.x -= 150. * time.delta_secs(),
+        }
+        if transform.translation.x > 200. {
+            sprite.flip_x = false;
+        } else if transform.translation.x < -200. {
+            sprite.flip_x = true;
         }
     }
 }
 
-fn update_people(mut query: Query<&mut Name, With<Person>>) {
-    for mut name in &mut query {
-        if name.0 == "Sophie" {
-            name.0 = "Sophie Grosse".to_string();
+fn update_people(
+    time: Res<Time>,
+    mut timer: ResMut<GreetTimer>,
+    mut query: Query<&mut Name, With<Person>>,
+) {
+    if timer.0.tick(time.delta()).just_finished() {
+        for mut name in &mut query {
+            if name.0 == "Sophie" {
+                name.0 = "Sophie Grosse".to_string();
+            }
         }
     }
 }
