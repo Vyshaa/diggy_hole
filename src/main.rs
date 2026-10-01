@@ -1,29 +1,22 @@
-use bevy::prelude::*;
+use bevy::{prelude::*, window::WindowResized};
 
 #[derive(Component)]
 struct Cat;
 
-#[derive(Component)]
-struct Person;
-
-#[derive(Component)]
-struct Name(String);
-
 #[derive(Resource)]
-struct GreetTimer(Timer);
+struct GameTimer(Timer);
 
-pub struct HelloPlugin;
+pub struct GamePlugin;
 
-impl Plugin for HelloPlugin {
+impl Plugin for GamePlugin {
     fn build(&self, app: &mut App) {
-        app.insert_resource(GreetTimer(Timer::from_seconds(0.1, TimerMode::Repeating)));
+        app.insert_resource(GameTimer(Timer::from_seconds(1.0, TimerMode::Repeating)));
         app.add_systems(Startup, add_cat);
-        app.add_systems(Update, (update_people, greet_people).chain());
+        app.add_systems(Update, (resize, (update_timer, move_cat).chain()));
     }
 }
 
 fn add_cat(mut commands: Commands, asset_server: Res<AssetServer>) {
-    commands.spawn((Person, Name("Sophie".to_string())));
     commands.spawn(Camera2d);
     let cat = asset_server.load("cat.png");
     commands.spawn((
@@ -36,9 +29,10 @@ fn add_cat(mut commands: Commands, asset_server: Res<AssetServer>) {
         },
         Transform::from_xyz(0., 0., 0.),
     ));
+    commands.spawn((Text2d::new("0"), Transform::from_xyz(0., 0., 0.)));
 }
 
-fn greet_people(time: Res<Time>, mut query: Query<(&mut Sprite, &mut Transform), With<Cat>>) {
+fn move_cat(time: Res<Time>, mut query: Query<(&mut Sprite, &mut Transform), With<Cat>>) {
     for (mut sprite, mut transform) in &mut query {
         match sprite.flip_x {
             true => transform.translation.x += 150. * time.delta_secs(),
@@ -52,16 +46,19 @@ fn greet_people(time: Res<Time>, mut query: Query<(&mut Sprite, &mut Transform),
     }
 }
 
-fn update_people(
-    time: Res<Time>,
-    mut timer: ResMut<GreetTimer>,
-    mut query: Query<&mut Name, With<Person>>,
-) {
-    if timer.0.tick(time.delta()).just_finished() {
-        for mut name in &mut query {
-            if name.0 == "Sophie" {
-                name.0 = "Sophie Grosse".to_string();
-            }
+fn resize(mut query: Query<&mut Transform>, mut resize: MessageReader<WindowResized>) {
+    for mut pos in &mut query {
+        for e in resize.read() {
+            pos.translation.x = -e.width / 2. + 10.;
+            pos.translation.y = e.height / 2. - 10.;
+        }
+    }
+}
+
+fn update_timer(time: Res<Time>, mut timer: ResMut<GameTimer>, mut query: Query<&mut Text2d>) {
+    for mut text in &mut query {
+        if timer.0.tick(time.delta()).just_finished() {
+            text.0 = format!("{}", time.elapsed().as_secs());
         }
     }
 }
@@ -69,6 +66,6 @@ fn update_people(
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
-        .add_plugins(HelloPlugin)
+        .add_plugins(GamePlugin)
         .run();
 }
