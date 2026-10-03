@@ -6,7 +6,7 @@ use bevy::prelude::*;
 struct Health(u32);
 
 #[derive(Component)]
-struct Velocity(Vec2);
+struct Velocity(Vec3);
 
 #[derive(Component)]
 struct Player;
@@ -26,7 +26,7 @@ impl PlayerBundle {
         Self {
             player: Player,
             health: Health(100),
-            velocity: Velocity(Vec2::ZERO),
+            velocity: Velocity(Vec3::new(100., 0., 0.)),
             sprite: Sprite {
                 image: cat.clone(),
                 custom_size: Some(Vec2::new(100., 225.)),
@@ -89,12 +89,15 @@ fn set_scene(mut commands: Commands, asset_server: Res<AssetServer>) {
         });
 }
 
-fn move_player(time: Res<Time>, mut query: Query<(&mut Sprite, &mut Transform), With<Player>>) {
-    for (mut sprite, mut transform) in &mut query {
+fn move_player(
+    time: Res<Time>,
+    mut query: Query<(&mut Sprite, &mut Transform, &Velocity), With<Player>>,
+) {
+    for (mut sprite, mut transform, velocity) in &mut query {
         if sprite.flip_x {
-            transform.translation.x += 150. * time.delta_secs();
+            transform.translation += velocity.0 * time.delta_secs();
         } else {
-            transform.translation.x -= 150. * time.delta_secs();
+            transform.translation -= velocity.0 * time.delta_secs();
         }
         if transform.translation.x > 200. {
             sprite.flip_x = false;
