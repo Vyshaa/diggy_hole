@@ -1,12 +1,12 @@
 use std::time::Duration;
 
-use bevy::prelude::*;
+use bevy::{ecs::query, prelude::*};
 
 #[derive(Component)]
 struct Health(u32);
 
 #[derive(Component)]
-struct Velocity(Vec3);
+struct Velocity(Vec2);
 
 #[derive(Component)]
 struct Player;
@@ -26,7 +26,7 @@ impl PlayerBundle {
         Self {
             player: Player,
             health: Health(100),
-            velocity: Velocity(Vec3::new(100., 0., 0.)),
+            velocity: Velocity(Vec2::new(100., 0.)),
             sprite: Sprite {
                 image: cat.clone(),
                 custom_size: Some(Vec2::new(100., 225.)),
@@ -44,6 +44,9 @@ struct MainCamera;
 #[derive(Component)]
 struct TimerDisplay;
 
+#[derive(Component)]
+struct HealthDisplay;
+
 #[derive(Resource)]
 struct GameTimer(Timer);
 
@@ -59,7 +62,10 @@ impl Plugin for GamePlugin {
     fn build(&self, app: &mut App) {
         app.insert_resource(GameTimer(Timer::from_seconds(1.0, TimerMode::Repeating)));
         app.add_systems(Startup, set_scene);
-        app.add_systems(Update, (update_timer, move_player).chain());
+        app.add_systems(
+            Update,
+            (update_timer, update_health_bar, move_player).chain(),
+        );
     }
 }
 
@@ -86,6 +92,16 @@ fn set_scene(mut commands: Commands, asset_server: Res<AssetServer>) {
                 Text::new("0"),
                 TimerDisplay,
             ));
+            parent.spawn((
+                Node {
+                    position_type: PositionType::Absolute,
+                    top: Val::Px(10.),
+                    left: Val::Px(10.),
+                    ..Default::default()
+                },
+                Text::new("0"),
+                HealthDisplay,
+            ));
         });
 }
 
@@ -95,9 +111,9 @@ fn move_player(
 ) {
     for (mut sprite, mut transform, velocity) in &mut query {
         if sprite.flip_x {
-            transform.translation += velocity.0 * time.delta_secs();
+            transform.translation += velocity.0.extend(0.) * time.delta_secs();
         } else {
-            transform.translation -= velocity.0 * time.delta_secs();
+            transform.translation -= velocity.0.extend(0.) * time.delta_secs();
         }
         if transform.translation.x > 200. {
             sprite.flip_x = false;
@@ -117,6 +133,14 @@ fn update_timer(
             text.0 = format!("{}", time.elapsed().as_secs());
         }
     }
+}
+
+fn update_health_bar(
+    mut ui_query: Query<&mut Text, With<HealthDisplay>>,
+    health_query: Query<&Health, With<Player>>,
+) {
+    let mut text = ui_query.single_mut().unwrap();
+    text.0 = health_query.single().unwrap().0.to_string();
 }
 
 fn main() {
