@@ -1,12 +1,12 @@
 use std::time::Duration;
 
-use bevy::{ecs::query, prelude::*};
+use bevy::prelude::*;
 
 #[derive(Component)]
 struct Health(u32);
 
 #[derive(Component)]
-struct Velocity(Vec2);
+struct Velocity(f32);
 
 #[derive(Component)]
 struct Player;
@@ -26,7 +26,7 @@ impl PlayerBundle {
         Self {
             player: Player,
             health: Health(100),
-            velocity: Velocity(Vec2::new(100., 0.)),
+            velocity: Velocity(100.),
             sprite: Sprite {
                 image: cat.clone(),
                 custom_size: Some(Vec2::new(100., 225.)),
@@ -77,48 +77,35 @@ fn set_scene(mut commands: Commands, asset_server: Res<AssetServer>) {
         .spawn(Node {
             width: Val::Percent(100.),
             height: Val::Percent(100.),
-            flex_direction: FlexDirection::Column,
+            flex_direction: FlexDirection::Row,
             justify_content: JustifyContent::SpaceBetween,
+            padding: UiRect::all(Val::Px(10.)),
             ..Default::default()
         })
         .with_children(|parent| {
-            parent.spawn((
-                Node {
-                    position_type: PositionType::Absolute,
-                    top: Val::Px(10.),
-                    left: Val::Px(10.),
-                    ..Default::default()
-                },
-                Text::new("0"),
-                TimerDisplay,
-            ));
-            parent.spawn((
-                Node {
-                    position_type: PositionType::Absolute,
-                    top: Val::Px(10.),
-                    left: Val::Px(10.),
-                    ..Default::default()
-                },
-                Text::new("0"),
-                HealthDisplay,
-            ));
+            parent.spawn((Text::new("0"), TimerDisplay));
+            parent.spawn((Text::new("0"), HealthDisplay));
         });
 }
 
 fn move_player(
     time: Res<Time>,
     mut query: Query<(&mut Sprite, &mut Transform, &Velocity), With<Player>>,
+    keyboard_input: Res<ButtonInput<KeyCode>>,
 ) {
     for (mut sprite, mut transform, velocity) in &mut query {
-        if sprite.flip_x {
-            transform.translation += velocity.0.extend(0.) * time.delta_secs();
-        } else {
-            transform.translation -= velocity.0.extend(0.) * time.delta_secs();
-        }
-        if transform.translation.x > 200. {
-            sprite.flip_x = false;
-        } else if transform.translation.x < -200. {
+        if keyboard_input.any_pressed([KeyCode::KeyD, KeyCode::ArrowRight]) {
+            transform.translation.x += velocity.0 * time.delta_secs();
             sprite.flip_x = true;
+        } else if keyboard_input.any_pressed([KeyCode::KeyA, KeyCode::ArrowLeft]) {
+            transform.translation.x -= velocity.0 * time.delta_secs();
+            sprite.flip_x = false;
+        }
+
+        if keyboard_input.any_pressed([KeyCode::KeyW, KeyCode::ArrowUp]) {
+            transform.translation.y += velocity.0 * time.delta_secs();
+        } else if keyboard_input.any_pressed([KeyCode::KeyS, KeyCode::ArrowDown]) {
+            transform.translation.y -= velocity.0 * time.delta_secs();
         }
     }
 }
