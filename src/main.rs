@@ -2,6 +2,23 @@ use std::time::Duration;
 
 use bevy::prelude::*;
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Action {
+    MoveUp,
+    MoveDown,
+    MoveLeft,
+    MoveRight,
+}
+
+fn pressed(input: &ButtonInput<KeyCode>, action: Action) -> bool {
+    match action {
+        Action::MoveUp => input.any_pressed([KeyCode::KeyW, KeyCode::ArrowUp]),
+        Action::MoveDown => input.any_pressed([KeyCode::KeyS, KeyCode::ArrowDown]),
+        Action::MoveLeft => input.any_pressed([KeyCode::KeyA, KeyCode::ArrowLeft]),
+        Action::MoveRight => input.any_pressed([KeyCode::KeyD, KeyCode::ArrowRight]),
+    }
+}
+
 #[derive(Component)]
 struct Health(u32);
 
@@ -93,21 +110,30 @@ fn move_player(
     mut query: Query<(&mut Sprite, &mut Transform, &Velocity), With<Player>>,
     keyboard_input: Res<ButtonInput<KeyCode>>,
 ) {
-    for (mut sprite, mut transform, velocity) in &mut query {
-        if keyboard_input.any_pressed([KeyCode::KeyD, KeyCode::ArrowRight]) {
-            transform.translation.x += velocity.0 * time.delta_secs();
-            sprite.flip_x = true;
-        } else if keyboard_input.any_pressed([KeyCode::KeyA, KeyCode::ArrowLeft]) {
-            transform.translation.x -= velocity.0 * time.delta_secs();
-            sprite.flip_x = false;
-        }
+    let Ok((mut sprite, mut transform, velocity)) = query.single_mut() else {
+        return;
+    };
+    let dt = velocity.0 * time.delta_secs();
+    let mut direction = Vec2::ZERO;
 
-        if keyboard_input.any_pressed([KeyCode::KeyW, KeyCode::ArrowUp]) {
-            transform.translation.y += velocity.0 * time.delta_secs();
-        } else if keyboard_input.any_pressed([KeyCode::KeyS, KeyCode::ArrowDown]) {
-            transform.translation.y -= velocity.0 * time.delta_secs();
-        }
+    if pressed(&keyboard_input, Action::MoveRight) {
+        direction.x = 1.;
+        sprite.flip_x = true;
+    } else if pressed(&keyboard_input, Action::MoveLeft) {
+        direction.x = -1.;
+        sprite.flip_x = false;
     }
+
+    if pressed(&keyboard_input, Action::MoveUp) {
+        direction.y = 1.;
+    } else if pressed(&keyboard_input, Action::MoveDown) {
+        direction.y = -1.;
+    }
+
+    if direction != Vec2::ZERO {
+        direction = direction.normalize();
+    }
+    transform.translation += (direction * dt).extend(0.);
 }
 
 fn update_timer(
