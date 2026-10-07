@@ -125,12 +125,10 @@ fn background_setup(
 
 fn move_player(
     time: Res<Time>,
-    mut query: Query<(&mut Sprite, &mut Transform, &Velocity), With<Player>>,
+    query: Single<(&mut Sprite, &mut Transform, &Velocity), With<Player>>,
     keyboard_input: Res<ButtonInput<KeyCode>>,
 ) {
-    let Ok((mut sprite, mut transform, velocity)) = query.single_mut() else {
-        return;
-    };
+    let (mut sprite, mut transform, velocity) = query.into_inner();
     let dt = velocity.0 * time.delta_secs();
     let mut direction = Vec2::ZERO;
 
@@ -157,21 +155,21 @@ fn move_player(
 fn update_timer(
     time: Res<Time>,
     mut timer: ResMut<GameTimer>,
-    mut query: Query<&mut Text, With<TimerDisplay>>,
+    query: Single<&mut Text, With<TimerDisplay>>,
 ) {
-    for mut text in &mut query {
-        if timer.just_finished(time.delta()) {
-            text.0 = format!("{}", time.elapsed().as_secs());
-        }
+    let mut text = query.into_inner();
+
+    if timer.just_finished(time.delta()) {
+        text.0 = format!("{}", time.elapsed().as_secs());
     }
 }
 
 fn update_health_bar(
-    mut ui_query: Query<&mut Text, With<HealthDisplay>>,
-    health_query: Query<&Health, With<Player>>,
+    ui_query: Single<&mut Text, With<HealthDisplay>>,
+    health_query: Single<&Health, With<Player>>,
 ) {
-    let mut text = ui_query.single_mut().unwrap();
-    text.0 = health_query.single().unwrap().0.to_string();
+    let mut text = ui_query.into_inner();
+    text.0 = health_query.into_inner().0.to_string();
 }
 
 fn main() {
