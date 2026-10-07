@@ -4,18 +4,18 @@ use bevy::prelude::*;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum Action {
-    MoveUp,
-    MoveDown,
-    MoveLeft,
-    MoveRight,
+    Up,
+    Down,
+    Left,
+    Right,
 }
 
 fn pressed(input: &ButtonInput<KeyCode>, action: Action) -> bool {
     match action {
-        Action::MoveUp => input.any_pressed([KeyCode::KeyW, KeyCode::ArrowUp]),
-        Action::MoveDown => input.any_pressed([KeyCode::KeyS, KeyCode::ArrowDown]),
-        Action::MoveLeft => input.any_pressed([KeyCode::KeyA, KeyCode::ArrowLeft]),
-        Action::MoveRight => input.any_pressed([KeyCode::KeyD, KeyCode::ArrowRight]),
+        Action::Up => input.any_pressed([KeyCode::KeyW, KeyCode::ArrowUp]),
+        Action::Down => input.any_pressed([KeyCode::KeyS, KeyCode::ArrowDown]),
+        Action::Left => input.any_pressed([KeyCode::KeyA, KeyCode::ArrowLeft]),
+        Action::Right => input.any_pressed([KeyCode::KeyD, KeyCode::ArrowRight]),
     }
 }
 
@@ -78,7 +78,7 @@ pub struct GamePlugin;
 impl Plugin for GamePlugin {
     fn build(&self, app: &mut App) {
         app.insert_resource(GameTimer(Timer::from_seconds(1.0, TimerMode::Repeating)));
-        app.add_systems(Startup, set_scene);
+        app.add_systems(Startup, (set_scene, background_setup));
         app.add_systems(
             Update,
             (update_timer, update_health_bar, move_player).chain(),
@@ -105,6 +105,20 @@ fn set_scene(mut commands: Commands, asset_server: Res<AssetServer>) {
         });
 }
 
+fn background_setup(
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
+) {
+    commands.spawn(Camera2d);
+
+    commands.spawn((
+        Mesh2d(meshes.add(Rectangle::new(1024., 768.))),
+        MeshMaterial2d(materials.add(ColorMaterial::from(Color::srgb(0.6, 0.4, 0.2)))),
+        Transform::from_xyz(0., 0., 0.),
+    ));
+}
+
 fn move_player(
     time: Res<Time>,
     mut query: Query<(&mut Sprite, &mut Transform, &Velocity), With<Player>>,
@@ -116,17 +130,17 @@ fn move_player(
     let dt = velocity.0 * time.delta_secs();
     let mut direction = Vec2::ZERO;
 
-    if pressed(&keyboard_input, Action::MoveRight) {
+    if pressed(&keyboard_input, Action::Right) {
         direction.x = 1.;
         sprite.flip_x = true;
-    } else if pressed(&keyboard_input, Action::MoveLeft) {
+    } else if pressed(&keyboard_input, Action::Left) {
         direction.x = -1.;
         sprite.flip_x = false;
     }
 
-    if pressed(&keyboard_input, Action::MoveUp) {
+    if pressed(&keyboard_input, Action::Up) {
         direction.y = 1.;
-    } else if pressed(&keyboard_input, Action::MoveDown) {
+    } else if pressed(&keyboard_input, Action::Down) {
         direction.y = -1.;
     }
 
