@@ -109,11 +109,15 @@ fn background_setup(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
+    window: Single<&Window>,
 ) {
     commands.spawn(Camera2d);
 
     commands.spawn((
-        Mesh2d(meshes.add(Rectangle::new(1024., 768.))),
+        Mesh2d(meshes.add(Rectangle::new(
+            window.resolution.width(),
+            window.resolution.height(),
+        ))),
         MeshMaterial2d(materials.add(ColorMaterial::from(Color::srgb(0.6, 0.4, 0.2)))),
         Transform::from_xyz(0., 0., 0.),
     ));
