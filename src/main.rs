@@ -115,11 +115,11 @@ fn background_setup(
 
     commands.spawn((
         Mesh2d(meshes.add(Rectangle::new(
-            window.resolution.width(),
-            window.resolution.height(),
+            window.resolution.width() * 0.9,
+            window.resolution.height() * 0.9,
         ))),
         MeshMaterial2d(materials.add(ColorMaterial::from(Color::srgb(0.6, 0.4, 0.2)))),
-        Transform::from_xyz(0., 0., 0.),
+        Transform::from_xyz(0., 0., -1.),
     ));
 }
 
