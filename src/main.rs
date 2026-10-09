@@ -1,6 +1,9 @@
+use crate::player::*;
 use std::time::Duration;
 
 use bevy::prelude::*;
+
+mod player;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum Action {
@@ -23,42 +26,6 @@ fn pressed(input: &ButtonInput<KeyCode>, action: Action) -> bool {
 struct Tile;
 
 const TILE_SIZE: f32 = 16.;
-
-#[derive(Component)]
-struct Health(u32);
-
-#[derive(Component)]
-struct Velocity(f32);
-
-#[derive(Component)]
-struct Player;
-
-#[derive(Bundle)]
-struct PlayerBundle {
-    player: Player,
-    health: Health,
-    velocity: Velocity,
-    sprite: Sprite,
-    transform: Transform,
-}
-
-impl PlayerBundle {
-    fn new(asset_server: &AssetServer) -> Self {
-        let cat = asset_server.load("cat.png");
-        Self {
-            player: Player,
-            health: Health(100),
-            velocity: Velocity(100.),
-            sprite: Sprite {
-                image: cat.clone(),
-                custom_size: Some(Vec2::new(100., 100.)),
-                image_mode: SpriteImageMode::Scale(SpriteScalingMode::FitCenter),
-                ..Default::default()
-            },
-            transform: Transform::from_xyz(0., 0., 0.),
-        }
-    }
-}
 
 #[derive(Component)]
 struct MainCamera;
@@ -153,7 +120,7 @@ fn detect_dig_collision(
     let player_radius = Vec2::new(50., 50.);
     for (entity, tile_transform) in tile_query.iter_mut() {
         let delta = (player_pos - tile_transform.translation.xy()).abs();
-        let threshold = player_radius + Vec2::splat(TILE_SIZE / 2.);
+        let threshold = player_radius;
 
         if delta.cmplt(threshold).all() {
             commands.entity(entity).despawn();
