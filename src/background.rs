@@ -24,7 +24,7 @@ pub(crate) fn setup_background(mut commands: Commands, window: Single<&Window>) 
         for x in 0..grid_w as i32 {
             let world_x = start_x + (x as f32) * TILE_SIZE + TILE_SIZE / 2.;
             let world_y = start_y - (y as f32) * TILE_SIZE - TILE_SIZE / 2.;
-            if (-50..50).contains(&(world_y as i32)) {
+            if (-32..32).contains(&(world_y as i32)) {
                 continue;
             }
 

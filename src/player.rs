@@ -7,7 +7,7 @@ use bevy::{
 pub(crate) struct Player;
 
 #[derive(Component)]
-pub(crate) struct Velocity(f32);
+pub(crate) struct Velocity(pub(crate) f32);
 
 #[derive(Component)]
 pub(crate) struct Hitbox(pub(crate) Aabb2d);
@@ -29,12 +29,12 @@ impl PlayerBundle {
             velocity: Velocity(100.),
             sprite: Sprite {
                 image: cat.clone(),
-                custom_size: Some(Vec2::new(100., 100.)),
+                custom_size: Some(Vec2::new(64., 64.)),
                 image_mode: SpriteImageMode::Scale(SpriteScalingMode::FitCenter),
                 ..Default::default()
             },
             transform: Transform::from_xyz(0., 0., 0.),
-            hitbox: Hitbox(Aabb2d::new(Vec2::ZERO, Vec2::new(50.0, 50.0))),
+            hitbox: Hitbox(Aabb2d::new(Vec2::ZERO, Vec2::new(32.0, 32.0))),
         }
     }
 }

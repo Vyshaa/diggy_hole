@@ -1,10 +1,12 @@
 use bevy::prelude::*;
 
 mod background;
+mod enemy;
 mod player;
 mod ui;
 
 use crate::background::*;
+use crate::enemy::*;
 use crate::player::*;
 use crate::ui::*;
 
@@ -12,7 +14,7 @@ pub struct GamePlugin;
 
 impl Plugin for GamePlugin {
     fn build(&self, app: &mut App) {
-        app.add_plugins((PlayerPlugin, BackgroundPlugin, UiPlugin));
+        app.add_plugins((PlayerPlugin, EnemyPlugin, BackgroundPlugin, UiPlugin));
     }
 }
 
