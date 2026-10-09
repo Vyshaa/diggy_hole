@@ -1,4 +1,4 @@
-use crate::player::*;
+use crate::player::{Hitbox, Player, Velocity};
 use bevy::{
     math::bounding::{Aabb2d, IntersectsVolume},
     prelude::*,
@@ -49,7 +49,7 @@ fn player_collision(
     }
 }
 
-pub(crate) struct EnemyPlugin;
+pub struct EnemyPlugin;
 
 impl Plugin for EnemyPlugin {
     fn build(&self, app: &mut App) {

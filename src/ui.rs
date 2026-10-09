@@ -3,10 +3,10 @@ use std::time::Duration;
 use bevy::prelude::*;
 
 #[derive(Component)]
-pub(crate) struct TimerDisplay;
+pub struct TimerDisplay;
 
 #[derive(Resource)]
-pub(crate) struct GameTimer(pub(crate) Timer);
+pub struct GameTimer(pub Timer);
 
 impl GameTimer {
     fn just_finished(&mut self, delta: Duration) -> bool {
@@ -14,7 +14,7 @@ impl GameTimer {
     }
 }
 
-pub(crate) fn setup_ui(mut commands: Commands) {
+pub fn setup_ui(mut commands: Commands) {
     commands
         .spawn(Node {
             width: Val::Percent(100.),
@@ -30,7 +30,7 @@ pub(crate) fn setup_ui(mut commands: Commands) {
         });
 }
 
-pub(crate) fn update_timer(
+pub fn update_timer(
     time: Res<Time>,
     mut timer: ResMut<GameTimer>,
     query: Single<&mut Text, With<TimerDisplay>>,
@@ -42,7 +42,7 @@ pub(crate) fn update_timer(
     }
 }
 
-pub(crate) struct UiPlugin;
+pub struct UiPlugin;
 
 impl Plugin for UiPlugin {
     fn build(&self, app: &mut App) {

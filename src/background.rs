@@ -6,11 +6,11 @@ use bevy::{
 use crate::player::{Hitbox, Player};
 
 #[derive(Component)]
-pub(crate) struct Tile;
+pub struct Tile;
 
 const TILE_SIZE: f32 = 16.;
 
-pub(crate) fn setup_background(mut commands: Commands, window: Single<&Window>) {
+pub fn setup_background(mut commands: Commands, window: Single<&Window>) {
     // Calculate grid dimensions
     let grid_width_pixels = window.resolution.width() * 0.9;
     let grid_height_pixels = window.resolution.height() * 0.9;
@@ -45,7 +45,7 @@ pub(crate) fn setup_background(mut commands: Commands, window: Single<&Window>) 
     }
 }
 
-pub(crate) fn detect_dig_collision(
+pub fn detect_dig_collision(
     player_query: Single<&Hitbox, With<Player>>,
     mut tile_query: Query<(Entity, &Hitbox), With<Tile>>,
     mut commands: Commands,
@@ -58,7 +58,7 @@ pub(crate) fn detect_dig_collision(
     }
 }
 
-pub(crate) struct BackgroundPlugin;
+pub struct BackgroundPlugin;
 
 impl Plugin for BackgroundPlugin {
     fn build(&self, app: &mut App) {

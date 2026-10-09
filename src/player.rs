@@ -4,16 +4,16 @@ use bevy::{
 };
 
 #[derive(Component)]
-pub(crate) struct Player;
+pub struct Player;
 
 #[derive(Component)]
-pub(crate) struct Velocity(pub(crate) f32);
+pub struct Velocity(pub f32);
 
 #[derive(Component)]
-pub(crate) struct Hitbox(pub(crate) Aabb2d);
+pub struct Hitbox(pub Aabb2d);
 
 #[derive(Bundle)]
-pub(crate) struct PlayerBundle {
+pub struct PlayerBundle {
     player: Player,
     velocity: Velocity,
     sprite: Sprite,
@@ -22,7 +22,7 @@ pub(crate) struct PlayerBundle {
 }
 
 impl PlayerBundle {
-    pub(crate) fn new(asset_server: &AssetServer) -> Self {
+    pub fn new(asset_server: &AssetServer) -> Self {
         let cat = asset_server.load("cat.png");
         Self {
             player: Player,
@@ -42,7 +42,7 @@ impl PlayerBundle {
 #[derive(Component)]
 struct MainCamera;
 
-pub(crate) fn setup_player(mut commands: Commands, asset_server: Res<AssetServer>) {
+pub fn setup_player(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands.spawn((Camera2d, MainCamera));
     commands.spawn(PlayerBundle::new(&asset_server));
 }
@@ -64,7 +64,7 @@ fn pressed(input: &ButtonInput<KeyCode>, action: Action) -> bool {
     }
 }
 
-pub(crate) fn move_player(
+pub fn move_player(
     time: Res<Time>,
     query: Single<(&mut Sprite, &mut Transform, &mut Hitbox, &Velocity), With<Player>>,
     keyboard_input: Res<ButtonInput<KeyCode>>,
@@ -96,7 +96,7 @@ pub(crate) fn move_player(
     hitbox.0.translate_by(movement);
 }
 
-pub(crate) struct PlayerPlugin;
+pub struct PlayerPlugin;
 
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
