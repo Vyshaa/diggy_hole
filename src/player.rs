@@ -90,8 +90,10 @@ pub(crate) fn move_player(
     if direction != Vec2::ZERO {
         direction = direction.normalize();
     }
-    transform.translation += (direction * dt).extend(0.);
-    *hitbox = Hitbox(Aabb2d::new(transform.translation.xy(), Vec2::new(50., 50.)));
+
+    let movement = direction * dt;
+    transform.translation += movement.extend(0.);
+    hitbox.0.translate_by(movement);
 }
 
 pub(crate) struct PlayerPlugin;
