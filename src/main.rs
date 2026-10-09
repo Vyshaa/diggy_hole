@@ -1,180 +1,23 @@
+mod background;
+mod player;
+mod ui;
+use crate::background::*;
 use crate::player::*;
-use std::time::Duration;
+use crate::ui::*;
 
 use bevy::prelude::*;
-
-mod player;
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-enum Action {
-    Up,
-    Down,
-    Left,
-    Right,
-}
-
-fn pressed(input: &ButtonInput<KeyCode>, action: Action) -> bool {
-    match action {
-        Action::Up => input.any_pressed([KeyCode::KeyW, KeyCode::ArrowUp]),
-        Action::Down => input.any_pressed([KeyCode::KeyS, KeyCode::ArrowDown]),
-        Action::Left => input.any_pressed([KeyCode::KeyA, KeyCode::ArrowLeft]),
-        Action::Right => input.any_pressed([KeyCode::KeyD, KeyCode::ArrowRight]),
-    }
-}
-
-#[derive(Component)]
-struct Tile;
-
-const TILE_SIZE: f32 = 16.;
-
-#[derive(Component)]
-struct MainCamera;
-
-#[derive(Component)]
-struct TimerDisplay;
-
-#[derive(Component)]
-struct HealthDisplay;
-
-#[derive(Resource)]
-struct GameTimer(Timer);
-
-impl GameTimer {
-    fn just_finished(&mut self, delta: Duration) -> bool {
-        self.0.tick(delta).just_finished()
-    }
-}
 
 pub struct GamePlugin;
 
 impl Plugin for GamePlugin {
     fn build(&self, app: &mut App) {
         app.insert_resource(GameTimer(Timer::from_seconds(1.0, TimerMode::Repeating)));
-        app.add_systems(Startup, (set_scene, background_setup));
+        app.add_systems(Startup, (setup_player, setup_background, setup_ui));
         app.add_systems(
             Update,
-            (
-                update_timer,
-                update_health_bar,
-                move_player,
-                detect_dig_collision,
-            )
-                .chain(),
+            (update_timer, move_player, detect_dig_collision).chain(),
         );
     }
-}
-
-fn set_scene(mut commands: Commands, asset_server: Res<AssetServer>) {
-    commands.spawn((Camera2d, MainCamera));
-    commands.spawn(PlayerBundle::new(&asset_server));
-
-    commands
-        .spawn(Node {
-            width: Val::Percent(100.),
-            height: Val::Percent(100.),
-            flex_direction: FlexDirection::Row,
-            justify_content: JustifyContent::SpaceBetween,
-            padding: UiRect::all(Val::Px(10.)),
-            ..Default::default()
-        })
-        .with_children(|parent| {
-            parent.spawn((Text::new("0"), TimerDisplay));
-            parent.spawn((Text::new("0"), HealthDisplay));
-        });
-}
-
-fn background_setup(mut commands: Commands, window: Single<&Window>) {
-    // Calculate grid dimensions
-    let grid_width_pixels = window.resolution.width() * 0.9;
-    let grid_height_pixels = window.resolution.height() * 0.9;
-    let grid_w = grid_width_pixels / TILE_SIZE;
-    let grid_h = grid_height_pixels / TILE_SIZE;
-    let start_x = -grid_width_pixels / 2.;
-    let start_y = grid_height_pixels / 2.;
-
-    // Spawn tiles in a grid
-    for y in 0..grid_h as i32 {
-        for x in 0..grid_w as i32 {
-            let world_x = start_x + (x as f32) * TILE_SIZE + TILE_SIZE / 2.;
-            let world_y = start_y - (y as f32) * TILE_SIZE - TILE_SIZE / 2.;
-
-            commands.spawn((
-                Sprite {
-                    color: Color::srgb(0.6, 0.4, 0.2),
-                    custom_size: Some(Vec2::new(TILE_SIZE, TILE_SIZE)),
-                    ..Default::default()
-                },
-                Transform::from_xyz(world_x, world_y, -1.),
-                Tile,
-            ));
-        }
-    }
-}
-
-fn detect_dig_collision(
-    player_query: Single<&Transform, With<Player>>,
-    mut tile_query: Query<(Entity, &Transform), With<Tile>>,
-    mut commands: Commands,
-) {
-    let player_pos = player_query.into_inner().translation.xy();
-    let player_radius = Vec2::new(50., 50.);
-    for (entity, tile_transform) in tile_query.iter_mut() {
-        let delta = (player_pos - tile_transform.translation.xy()).abs();
-        let threshold = player_radius;
-
-        if delta.cmplt(threshold).all() {
-            commands.entity(entity).despawn();
-        }
-    }
-}
-
-fn move_player(
-    time: Res<Time>,
-    query: Single<(&mut Sprite, &mut Transform, &Velocity), With<Player>>,
-    keyboard_input: Res<ButtonInput<KeyCode>>,
-) {
-    let (mut sprite, mut transform, velocity) = query.into_inner();
-    let dt = velocity.0 * time.delta_secs();
-    let mut direction = Vec2::ZERO;
-
-    if pressed(&keyboard_input, Action::Right) {
-        direction.x = 1.;
-        sprite.flip_x = true;
-    } else if pressed(&keyboard_input, Action::Left) {
-        direction.x = -1.;
-        sprite.flip_x = false;
-    }
-
-    if pressed(&keyboard_input, Action::Up) {
-        direction.y = 1.;
-    } else if pressed(&keyboard_input, Action::Down) {
-        direction.y = -1.;
-    }
-
-    if direction != Vec2::ZERO {
-        direction = direction.normalize();
-    }
-    transform.translation += (direction * dt).extend(0.);
-}
-
-fn update_timer(
-    time: Res<Time>,
-    mut timer: ResMut<GameTimer>,
-    query: Single<&mut Text, With<TimerDisplay>>,
-) {
-    let mut text = query.into_inner();
-
-    if timer.just_finished(time.delta()) {
-        text.0 = format!("{}", time.elapsed().as_secs());
-    }
-}
-
-fn update_health_bar(
-    ui_query: Single<&mut Text, With<HealthDisplay>>,
-    health_query: Single<&Health, With<Player>>,
-) {
-    let mut text = ui_query.into_inner();
-    text.0 = health_query.into_inner().0.to_string();
 }
 
 fn main() {
