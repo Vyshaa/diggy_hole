@@ -1,4 +1,7 @@
-use bevy::prelude::*;
+use bevy::{
+    math::bounding::{Aabb2d, BoundingVolume},
+    prelude::*,
+};
 
 #[derive(Component)]
 pub(crate) struct Player;
@@ -6,12 +9,16 @@ pub(crate) struct Player;
 #[derive(Component)]
 pub(crate) struct Velocity(f32);
 
+#[derive(Component)]
+pub(crate) struct Hitbox(pub(crate) Aabb2d);
+
 #[derive(Bundle)]
 pub(crate) struct PlayerBundle {
     player: Player,
     velocity: Velocity,
     sprite: Sprite,
     transform: Transform,
+    hitbox: Hitbox,
 }
 
 impl PlayerBundle {
@@ -27,6 +34,7 @@ impl PlayerBundle {
                 ..Default::default()
             },
             transform: Transform::from_xyz(0., 0., 0.),
+            hitbox: Hitbox(Aabb2d::new(Vec2::ZERO, Vec2::new(50.0, 50.0))),
         }
     }
 }
@@ -58,10 +66,10 @@ fn pressed(input: &ButtonInput<KeyCode>, action: Action) -> bool {
 
 pub(crate) fn move_player(
     time: Res<Time>,
-    query: Single<(&mut Sprite, &mut Transform, &Velocity), With<Player>>,
+    query: Single<(&mut Sprite, &mut Transform, &mut Hitbox, &Velocity), With<Player>>,
     keyboard_input: Res<ButtonInput<KeyCode>>,
 ) {
-    let (mut sprite, mut transform, velocity) = query.into_inner();
+    let (mut sprite, mut transform, mut hitbox, velocity) = query.into_inner();
     let dt = velocity.0 * time.delta_secs();
     let mut direction = Vec2::ZERO;
 
@@ -83,6 +91,7 @@ pub(crate) fn move_player(
         direction = direction.normalize();
     }
     transform.translation += (direction * dt).extend(0.);
+    *hitbox = Hitbox(Aabb2d::new(transform.translation.xy(), Vec2::new(50., 50.)));
 }
 
 pub(crate) struct PlayerPlugin;

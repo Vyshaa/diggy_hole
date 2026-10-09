@@ -1,6 +1,9 @@
-use bevy::prelude::*;
+use bevy::{
+    math::bounding::{Aabb2d, IntersectsVolume},
+    prelude::*,
+};
 
-use crate::player::Player;
+use crate::player::{Hitbox, Player};
 
 #[derive(Component)]
 pub(crate) struct Tile;
@@ -31,6 +34,10 @@ pub(crate) fn setup_background(mut commands: Commands, window: Single<&Window>) 
                     custom_size: Some(Vec2::new(TILE_SIZE, TILE_SIZE)),
                     ..Default::default()
                 },
+                Hitbox(Aabb2d::new(
+                    Vec2::new(world_x, world_y),
+                    Vec2::new(TILE_SIZE / 2., TILE_SIZE / 2.),
+                )),
                 Transform::from_xyz(world_x, world_y, -1.),
                 Tile,
             ));
@@ -39,17 +46,13 @@ pub(crate) fn setup_background(mut commands: Commands, window: Single<&Window>) 
 }
 
 pub(crate) fn detect_dig_collision(
-    player_query: Single<&Transform, With<Player>>,
-    mut tile_query: Query<(Entity, &Transform), With<Tile>>,
+    player_query: Single<&Hitbox, With<Player>>,
+    mut tile_query: Query<(Entity, &Hitbox), With<Tile>>,
     mut commands: Commands,
 ) {
-    let player_pos = player_query.into_inner().translation.xy();
-    let player_radius = Vec2::new(50., 50.);
-    for (entity, tile_transform) in tile_query.iter_mut() {
-        let delta = (player_pos - tile_transform.translation.xy()).abs();
-        let threshold = player_radius;
-
-        if delta.cmplt(threshold).all() {
+    let player_hitbox = player_query.into_inner().0;
+    for (entity, tile_hitbox) in tile_query.iter_mut() {
+        if player_hitbox.intersects(&tile_hitbox.0) {
             commands.entity(entity).despawn();
         }
     }
