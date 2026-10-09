@@ -51,3 +51,12 @@ pub(crate) fn detect_dig_collision(
         }
     }
 }
+
+pub(crate) struct BackgroundPlugin;
+
+impl Plugin for BackgroundPlugin {
+    fn build(&self, app: &mut App) {
+        app.add_systems(Startup, setup_background)
+            .add_systems(Update, detect_dig_collision);
+    }
+}

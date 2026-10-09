@@ -84,3 +84,12 @@ pub(crate) fn move_player(
     }
     transform.translation += (direction * dt).extend(0.);
 }
+
+pub(crate) struct PlayerPlugin;
+
+impl Plugin for PlayerPlugin {
+    fn build(&self, app: &mut App) {
+        app.add_systems(Startup, setup_player)
+            .add_systems(Update, move_player);
+    }
+}

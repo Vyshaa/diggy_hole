@@ -41,3 +41,13 @@ pub(crate) fn update_timer(
         text.0 = format!("{}", time.elapsed().as_secs());
     }
 }
+
+pub(crate) struct UiPlugin;
+
+impl Plugin for UiPlugin {
+    fn build(&self, app: &mut App) {
+        app.insert_resource(GameTimer(Timer::from_seconds(1.0, TimerMode::Repeating)))
+            .add_systems(Startup, setup_ui)
+            .add_systems(Update, update_timer);
+    }
+}
