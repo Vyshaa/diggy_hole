@@ -12,8 +12,8 @@ const TILE_SIZE: f32 = 16.;
 
 pub fn setup_background(mut commands: Commands, window: Single<&Window>) {
     // Calculate grid dimensions
-    let grid_width_pixels = window.resolution.width() * 0.9;
-    let grid_height_pixels = window.resolution.height() * 0.9;
+    let grid_width_pixels = window.resolution.width();
+    let grid_height_pixels = window.resolution.height();
     let grid_w = grid_width_pixels / TILE_SIZE;
     let grid_h = grid_height_pixels / TILE_SIZE;
     let start_x = -grid_width_pixels / 2.;
@@ -24,7 +24,7 @@ pub fn setup_background(mut commands: Commands, window: Single<&Window>) {
         for x in 0..grid_w as i32 {
             let world_x = start_x + (x as f32) * TILE_SIZE + TILE_SIZE / 2.;
             let world_y = start_y - (y as f32) * TILE_SIZE - TILE_SIZE / 2.;
-            if (-32..32).contains(&(world_y as i32)) {
+            if (-32..=32).contains(&(world_y as i32)) {
                 continue;
             }
 
