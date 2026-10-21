@@ -87,10 +87,7 @@ pub fn move_player(
         direction.y = -1.;
     }
 
-    if direction != Vec2::ZERO {
-        direction = direction.normalize();
-    }
-
+    direction = direction.normalize_or_zero();
     let movement = direction * dt;
     transform.translation += movement.extend(0.);
     hitbox.0.translate_by(movement);

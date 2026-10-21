@@ -1,6 +1,6 @@
 use crate::player::{Hitbox, Player, Velocity};
 use bevy::{
-    math::bounding::{Aabb2d, IntersectsVolume},
+    math::bounding::{Aabb2d, BoundingVolume, IntersectsVolume},
     prelude::*,
 };
 
@@ -49,11 +49,27 @@ fn player_collision(
     }
 }
 
+fn move_enemy(
+    time: Res<Time>,
+    player_query: Single<&Transform, (With<Player>, Without<Enemy>)>,
+    mut enemy_query: Query<(&mut Transform, &mut Hitbox, &Velocity), With<Enemy>>,
+) {
+    let player_pos = player_query.into_inner().translation;
+    for (mut transform, mut hitbox, velocity) in enemy_query.iter_mut() {
+        let dt = velocity.0 * time.delta_secs();
+        let direction = player_pos - transform.translation;
+        let movement = direction.normalize_or_zero() * dt;
+
+        transform.translation += movement;
+        hitbox.0.translate_by(movement.xy());
+    }
+}
+
 pub struct EnemyPlugin;
 
 impl Plugin for EnemyPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(Startup, setup_enemies)
-            .add_systems(Update, player_collision);
+            .add_systems(Update, (move_enemy, player_collision).chain());
     }
 }
