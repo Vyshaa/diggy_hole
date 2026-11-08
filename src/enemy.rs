@@ -1,8 +1,8 @@
-use crate::player::{Hitbox, Player, Velocity};
-use bevy::{
-    math::bounding::{Aabb2d, BoundingVolume, IntersectsVolume},
-    prelude::*,
+use crate::{
+    background::Tile,
+    player::{Hitbox, Player, Velocity},
 };
+use bevy::prelude::*;
 
 #[derive(Component)]
 struct Enemy;
@@ -53,12 +53,21 @@ fn move_enemy(
     time: Res<Time>,
     player_query: Single<&Transform, (With<Player>, Without<Enemy>)>,
     mut enemy_query: Query<(&mut Transform, &mut Hitbox, &Velocity), With<Enemy>>,
+    tile_query: Query<&Hitbox, (With<Tile>, Without<Enemy>)>,
 ) {
     let player_pos = player_query.into_inner().translation;
     for (mut transform, mut hitbox, velocity) in enemy_query.iter_mut() {
         let dt = velocity.0 * time.delta_secs();
         let direction = player_pos - transform.translation;
         let movement = direction.normalize_or_zero() * dt;
+        if tile_query.iter().any(|tile_hitbox| {
+            hitbox
+                .0
+                .translated_by(movement.xy())
+                .intersects(&tile_hitbox.0)
+        }) {
+            continue;
+        }
 
         transform.translation += movement;
         hitbox.0.translate_by(movement.xy());

@@ -1,7 +1,4 @@
-use bevy::{
-    math::bounding::{Aabb2d, BoundingVolume},
-    prelude::*,
-};
+use bevy::prelude::*;
 
 #[derive(Component)]
 pub struct Player;
