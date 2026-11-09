@@ -1,6 +1,5 @@
 use bevy::prelude::*;
 
-use bevy_northstar::prelude::*;
 
 use crate::player::{Hitbox, Player};
 
@@ -18,11 +17,7 @@ pub fn setup_background(mut commands: Commands, window: Single<&Window>) {
     let start_x = -grid_width_pixels / 2.;
     let start_y = grid_height_pixels / 2.;
 
-    let grid_settings = GridSettingsBuilder::new_2d(grid_w as u32, grid_h as u32)
-        .chunk_size(TILE_SIZE as u32)
-        .build();
 
-    let mut grid = CardinalGrid::new(&grid_settings);
 
     // Spawn tiles in a grid
     for y in 0..grid_h as i32 {
@@ -50,6 +45,7 @@ pub fn setup_background(mut commands: Commands, window: Single<&Window>) {
     }
 }
 
+// commands.entity(tile_entity).remove::<Sprite>().remove::<Aabb2d>();
 pub fn detect_dig_collision(
     player_query: Single<&Hitbox, With<Player>>,
     mut tile_query: Query<(Entity, &Hitbox), With<Tile>>,
@@ -67,8 +63,7 @@ pub struct BackgroundPlugin;
 
 impl Plugin for BackgroundPlugin {
     fn build(&self, app: &mut App) {
-        app.add_plugins(NorthstarPlugin::<CardinalNeighborhood>::default())
-            .add_systems(Startup, setup_background)
+        app.add_systems(Startup, setup_background)
             .add_systems(Update, detect_dig_collision);
     }
 }
