@@ -1,8 +1,9 @@
 use crate::{
-    background::Tile,
+    background::{TILE_SIZE, Tile},
     player::{Hitbox, Player, Velocity},
 };
 use bevy::prelude::*;
+use pathfinding::prelude::astar;
 
 #[derive(Component)]
 struct Enemy;
@@ -49,25 +50,71 @@ fn player_collision(
     }
 }
 
+//grid starts at (0,0) in the top left, world starts at (0, 0) center of the screen
+fn world_to_grid(world_pos: Vec2, window: &Window) -> (i32, i32) {
+    let win_w = window.resolution.width();
+    let win_h = window.resolution.height();
+    let grid_x = ((win_w / 2. + world_pos.x) / TILE_SIZE).floor() as i32;
+    let grid_y = ((win_h / 2. - world_pos.y) / TILE_SIZE).floor() as i32;
+    (grid_x, grid_y)
+}
+
+fn find_path(start: (i32, i32), goal: (i32, i32)) -> Option<Vec<(i32, i32)>> {
+    astar(
+        &start,
+        |&(x, y)| {
+            [(x, y + 1), (x, y - 1), (x - 1, y), (x + 1, y)]
+                .into_iter()
+                .map(|p| (p, 1)) // each move costs 1
+        },
+        |&(x, y)| x.abs_diff(goal.0) + y.abs_diff(goal.1), // Manhattan distance
+        |&p| p == goal,
+    )
+    .map(|(path, _cost)| path)
+}
+
 fn move_enemy(
     time: Res<Time>,
     player_query: Single<&Transform, (With<Player>, Without<Enemy>)>,
     mut enemy_query: Query<(&mut Transform, &mut Hitbox, &Velocity), With<Enemy>>,
     tile_query: Query<&Hitbox, (With<Tile>, Without<Enemy>)>,
+    window: Single<&Window>,
 ) {
     let player_pos = player_query.into_inner().translation;
     for (mut transform, mut hitbox, velocity) in enemy_query.iter_mut() {
         let dt = velocity.0 * time.delta_secs();
-        let direction = player_pos - transform.translation;
+
+        let direction = find_path(
+            world_to_grid(transform.translation.xy(), &window),
+            world_to_grid(player_pos.xy(), &window),
+        );
+        println!(
+            "enemy: {:?}\nplayer: {:?}",
+            world_to_grid(transform.translation.xy(), &window),
+            world_to_grid(player_pos.xy(), &window)
+        );
+        let direction = direction
+            .and_then(|path| path.get(1).copied())
+            .map(|(x, y)| {
+                let win_w = window.resolution.width();
+                let win_h = window.resolution.height();
+                println!("next: {} {}", x, y);
+                Vec2::new(
+                    win_w / 2. - x as f32 * TILE_SIZE + TILE_SIZE / 2.,
+                    win_h / 2. - y as f32 * TILE_SIZE - TILE_SIZE / 2.,
+                )
+            })
+            .unwrap()
+            .extend(0.);
         let movement = direction.normalize_or_zero() * dt;
-        if tile_query.iter().any(|tile_hitbox| {
-            hitbox
-                .0
-                .translated_by(movement.xy())
-                .intersects(&tile_hitbox.0)
-        }) {
-            continue;
-        }
+        //if tile_query.iter().any(|tile_hitbox| {
+        //    hitbox
+        //        .0
+        //        .translated_by(movement.xy())
+        //        .intersects(&tile_hitbox.0)
+        //}) {
+        //    continue;
+        //}
 
         transform.translation += movement;
         hitbox.0.translate_by(movement.xy());

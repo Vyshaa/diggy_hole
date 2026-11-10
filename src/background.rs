@@ -6,25 +6,18 @@ use crate::player::{Hitbox, Player};
 #[derive(Component)]
 pub struct Tile;
 
-const TILE_SIZE: f32 = 16.;
+pub(crate) const TILE_SIZE: f32 = 16.;
 
 pub fn setup_background(mut commands: Commands, window: Single<&Window>) {
     let win_w = window.resolution.width();
     let win_h = window.resolution.height();
     let width = (win_w / TILE_SIZE) as u32;
     let height = (win_h / TILE_SIZE) as u32;
+
     let map_size = TilemapSize {
         x: width,
         y: height,
     };
-
-    // Center the map while keeping its tiles aligned with the old grid.
-    let map_center = Vec3::new(
-        -win_w / 2. + width as f32 * TILE_SIZE / 2.,
-        win_h / 2. - height as f32 * TILE_SIZE / 2.,
-        -1.,
-    );
-
     let map_entity = commands.spawn_empty().id();
     let mut storage = TileStorage::empty(map_size);
 
@@ -70,6 +63,12 @@ pub fn setup_background(mut commands: Commands, window: Single<&Window>) {
         x: TILE_SIZE,
         y: TILE_SIZE,
     };
+    // Center the map while keeping its tiles aligned with the old grid.
+    let map_center = Vec3::new(
+        -win_w / 2. + width as f32 * TILE_SIZE / 2.,
+        win_h / 2. - height as f32 * TILE_SIZE / 2.,
+        -1.,
+    );
 
     commands.entity(map_entity).insert((TilemapBundle {
         grid_size: tile_size.into(),
@@ -83,7 +82,6 @@ pub fn setup_background(mut commands: Commands, window: Single<&Window>) {
     },));
 }
 
-// commands.entity(tile_entity).remove::<Sprite>().remove::<Aabb2d>();
 pub fn detect_dig_collision(
     player_query: Single<&Hitbox, With<Player>>,
     mut tile_query: Query<(Entity, &Hitbox), With<Tile>>,
@@ -92,7 +90,10 @@ pub fn detect_dig_collision(
     let player_hitbox = player_query.into_inner().0;
     for (entity, tile_hitbox) in tile_query.iter_mut() {
         if player_hitbox.intersects(&tile_hitbox.0) {
-            commands.entity(entity).despawn();
+            commands
+                .entity(entity)
+                .remove::<Hitbox>()
+                .insert(Visibility::Hidden);
         }
     }
 }

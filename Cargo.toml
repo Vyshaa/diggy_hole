@@ -6,6 +6,7 @@ edition = "2024"
 [dependencies]
 bevy = { version = "0.20", features = ["debug"] }
 bevy_ecs_tilemap = "0.20.0"
+pathfinding = "4.16.0"
 
 [profile.dev]
 debug = 0
