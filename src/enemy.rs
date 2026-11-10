@@ -59,13 +59,31 @@ fn world_to_grid(world_pos: Vec2, window: &Window) -> (i32, i32) {
     (grid_x, grid_y)
 }
 
+fn grid_to_world((x, y): (i32, i32), window: &Window) -> Vec2 {
+    let win_w = window.resolution.width();
+    let win_h = window.resolution.height();
+    Vec2::new(
+        -win_w / 2.0 + (x as f32 + 0.5) * TILE_SIZE,
+        win_h / 2.0 - (y as f32 + 0.5) * TILE_SIZE,
+    )
+}
+
 fn find_path(start: (i32, i32), goal: (i32, i32)) -> Option<Vec<(i32, i32)>> {
     astar(
         &start,
         |&(x, y)| {
-            [(x, y + 1), (x, y - 1), (x - 1, y), (x + 1, y)]
-                .into_iter()
-                .map(|p| (p, 1)) // each move costs 1
+            [
+                (x, y + 1),
+                (x, y - 1),
+                (x - 1, y),
+                (x + 1, y),
+                (x + 1, y + 1),
+                (x - 1, y + 1),
+                (x + 1, y - 1),
+                (x - 1, y - 1),
+            ]
+            .into_iter()
+            .map(|p| (p, 1)) // each move costs 1
         },
         |&(x, y)| x.abs_diff(goal.0) + y.abs_diff(goal.1), // Manhattan distance
         |&p| p == goal,
@@ -84,37 +102,22 @@ fn move_enemy(
     for (mut transform, mut hitbox, velocity) in enemy_query.iter_mut() {
         let dt = velocity.0 * time.delta_secs();
 
-        let direction = find_path(
-            world_to_grid(transform.translation.xy(), &window),
-            world_to_grid(player_pos.xy(), &window),
-        );
-        println!(
-            "enemy: {:?}\nplayer: {:?}",
-            world_to_grid(transform.translation.xy(), &window),
-            world_to_grid(player_pos.xy(), &window)
-        );
+        let enemy_pos = world_to_grid(transform.translation.xy(), &window);
+        let direction = find_path(enemy_pos, world_to_grid(player_pos.xy(), &window));
         let direction = direction
             .and_then(|path| path.get(1).copied())
-            .map(|(x, y)| {
-                let win_w = window.resolution.width();
-                let win_h = window.resolution.height();
-                println!("next: {} {}", x, y);
-                Vec2::new(
-                    win_w / 2. - x as f32 * TILE_SIZE + TILE_SIZE / 2.,
-                    win_h / 2. - y as f32 * TILE_SIZE - TILE_SIZE / 2.,
-                )
-            })
+            .map(|(x, y)| Vec2::new((x - enemy_pos.0) as f32, -(y - enemy_pos.1) as f32))
             .unwrap()
             .extend(0.);
         let movement = direction.normalize_or_zero() * dt;
-        //if tile_query.iter().any(|tile_hitbox| {
-        //    hitbox
-        //        .0
-        //        .translated_by(movement.xy())
-        //        .intersects(&tile_hitbox.0)
-        //}) {
-        //    continue;
-        //}
+        if tile_query.iter().any(|tile_hitbox| {
+            hitbox
+                .0
+                .translated_by(movement.xy())
+                .intersects(&tile_hitbox.0)
+        }) {
+            continue;
+        }
 
         transform.translation += movement;
         hitbox.0.translate_by(movement.xy());
