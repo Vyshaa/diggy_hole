@@ -14,12 +14,7 @@ pub fn setup_background(mut commands: Commands, window: Single<&Window>) {
     let width = (win_w / TILE_SIZE) as u32;
     let height = (win_h / TILE_SIZE) as u32;
 
-    let map_size = TilemapSize {
-        x: width,
-        y: height,
-    };
     let map_entity = commands.spawn_empty().id();
-    let mut storage = TileStorage::empty(map_size);
 
     for row in 0..height {
         let world_y = win_h / 2. - (row as f32 + 0.5) * TILE_SIZE;
@@ -28,34 +23,30 @@ pub fn setup_background(mut commands: Commands, window: Single<&Window>) {
             continue;
         }
 
-        for x in 0..width {
-            let world_x = -win_w / 2. + (x as f32 + 0.5) * TILE_SIZE;
+        for col in 0..width {
+            let world_x = -win_w / 2. + (col as f32 + 0.5) * TILE_SIZE;
             let position = TilePos {
-                x,
+                x: col,
                 y: height - 1 - row,
             };
-            let tile_entity = commands
-                .spawn((
-                    TileBundle {
-                        position,
-                        tilemap_id: TilemapId(map_entity),
-                        ..Default::default()
-                    },
-                    Sprite {
-                        color: Color::srgb(0.6, 0.4, 0.2),
-                        custom_size: Some(Vec2::new(TILE_SIZE, TILE_SIZE)),
-                        ..Default::default()
-                    },
-                    Hitbox(Aabb2d::new(
-                        Vec2::new(world_x, world_y),
-                        Vec2::splat(TILE_SIZE / 2.),
-                    )),
-                    Transform::from_xyz(world_x, world_y, -1.),
-                    Tile,
-                ))
-                .id();
-
-            storage.set(&position, tile_entity);
+            commands.spawn((
+                TileBundle {
+                    position,
+                    tilemap_id: TilemapId(map_entity),
+                    ..Default::default()
+                },
+                Sprite {
+                    color: Color::srgb(0.6, 0.4, 0.2),
+                    custom_size: Some(Vec2::new(TILE_SIZE, TILE_SIZE)),
+                    ..Default::default()
+                },
+                Hitbox(Aabb2d::new(
+                    Vec2::new(world_x, world_y),
+                    Vec2::splat(TILE_SIZE / 2.),
+                )),
+                Transform::from_xyz(world_x, world_y, -1.),
+                Tile,
+            ));
         }
     }
 
@@ -63,18 +54,20 @@ pub fn setup_background(mut commands: Commands, window: Single<&Window>) {
         x: TILE_SIZE,
         y: TILE_SIZE,
     };
+    let map_size = TilemapSize {
+        x: width,
+        y: height,
+    };
     // Center the map while keeping its tiles aligned with the old grid.
     let map_center = Vec3::new(
         -win_w / 2. + width as f32 * TILE_SIZE / 2.,
         win_h / 2. - height as f32 * TILE_SIZE / 2.,
         -1.,
     );
-
     commands.entity(map_entity).insert((TilemapBundle {
         grid_size: tile_size.into(),
         map_type: TilemapType::default(),
         size: map_size,
-        storage,
         tile_size,
         anchor: TilemapAnchor::Center,
         transform: Transform::from_translation(map_center),

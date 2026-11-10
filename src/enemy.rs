@@ -21,7 +21,7 @@ impl EnemyBundle {
     fn new() -> Self {
         Self {
             enemy: Enemy,
-            velocity: Velocity(100.),
+            velocity: Velocity(80.),
             sprite: Sprite {
                 color: Color::srgb(1., 0., 0.),
                 custom_size: Some(Vec2::new(64., 64.)),
@@ -50,7 +50,6 @@ fn player_collision(
     }
 }
 
-//grid starts at (0,0) in the top left, world starts at (0, 0) center of the screen
 fn world_to_grid(world_pos: Vec2, window: &Window) -> (i32, i32) {
     let win_w = window.resolution.width();
     let win_h = window.resolution.height();
@@ -59,6 +58,7 @@ fn world_to_grid(world_pos: Vec2, window: &Window) -> (i32, i32) {
     (grid_x, grid_y)
 }
 
+#[allow(dead_code)]
 fn grid_to_world((x, y): (i32, i32), window: &Window) -> Vec2 {
     let win_w = window.resolution.width();
     let win_h = window.resolution.height();
@@ -68,7 +68,16 @@ fn grid_to_world((x, y): (i32, i32), window: &Window) -> Vec2 {
     )
 }
 
-fn find_path(start: (i32, i32), goal: (i32, i32)) -> Option<Vec<(i32, i32)>> {
+fn find_path(
+    start: (i32, i32),
+    goal: (i32, i32),
+    tile_query: Query<(&Hitbox, &Transform), (With<Tile>, Without<Enemy>)>,
+    window: &Window,
+) -> Option<Vec<(i32, i32)>> {
+    let invalid_tiles: Vec<(i32, i32)> = tile_query
+        .iter()
+        .map(|(_, tile_pos)| world_to_grid(tile_pos.translation.xy(), window))
+        .collect();
     astar(
         &start,
         |&(x, y)| {
@@ -83,6 +92,7 @@ fn find_path(start: (i32, i32), goal: (i32, i32)) -> Option<Vec<(i32, i32)>> {
                 (x - 1, y - 1),
             ]
             .into_iter()
+            .filter(|(x, y)| !invalid_tiles.contains(&(*x, *y)))
             .map(|p| (p, 1)) // each move costs 1
         },
         |&(x, y)| x.abs_diff(goal.0) + y.abs_diff(goal.1), // Manhattan distance
@@ -95,7 +105,7 @@ fn move_enemy(
     time: Res<Time>,
     player_query: Single<&Transform, (With<Player>, Without<Enemy>)>,
     mut enemy_query: Query<(&mut Transform, &mut Hitbox, &Velocity), With<Enemy>>,
-    tile_query: Query<&Hitbox, (With<Tile>, Without<Enemy>)>,
+    tile_query: Query<(&Hitbox, &Transform), (With<Tile>, Without<Enemy>)>,
     window: Single<&Window>,
 ) {
     let player_pos = player_query.into_inner().translation;
@@ -103,21 +113,14 @@ fn move_enemy(
         let dt = velocity.0 * time.delta_secs();
 
         let enemy_pos = world_to_grid(transform.translation.xy(), &window);
-        let direction = find_path(enemy_pos, world_to_grid(player_pos.xy(), &window));
+        let player_pos = world_to_grid(player_pos.xy(), &window);
+        let direction = find_path(enemy_pos, player_pos, tile_query, &window);
         let direction = direction
             .and_then(|path| path.get(1).copied())
             .map(|(x, y)| Vec2::new((x - enemy_pos.0) as f32, -(y - enemy_pos.1) as f32))
             .unwrap()
             .extend(0.);
         let movement = direction.normalize_or_zero() * dt;
-        if tile_query.iter().any(|tile_hitbox| {
-            hitbox
-                .0
-                .translated_by(movement.xy())
-                .intersects(&tile_hitbox.0)
-        }) {
-            continue;
-        }
 
         transform.translation += movement;
         hitbox.0.translate_by(movement.xy());
