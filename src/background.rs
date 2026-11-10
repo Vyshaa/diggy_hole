@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-
+use bevy_ecs_tilemap::prelude::*;
 
 use crate::player::{Hitbox, Player};
 
@@ -9,40 +9,78 @@ pub struct Tile;
 const TILE_SIZE: f32 = 16.;
 
 pub fn setup_background(mut commands: Commands, window: Single<&Window>) {
-    // Calculate grid dimensions
-    let grid_width_pixels = window.resolution.width();
-    let grid_height_pixels = window.resolution.height();
-    let grid_w = grid_width_pixels / TILE_SIZE;
-    let grid_h = grid_height_pixels / TILE_SIZE;
-    let start_x = -grid_width_pixels / 2.;
-    let start_y = grid_height_pixels / 2.;
+    let win_w = window.resolution.width();
+    let win_h = window.resolution.height();
+    let width = (win_w / TILE_SIZE) as u32;
+    let height = (win_h / TILE_SIZE) as u32;
+    let map_size = TilemapSize {
+        x: width,
+        y: height,
+    };
 
+    // Center the map while keeping its tiles aligned with the old grid.
+    let map_center = Vec3::new(
+        -win_w / 2. + width as f32 * TILE_SIZE / 2.,
+        win_h / 2. - height as f32 * TILE_SIZE / 2.,
+        -1.,
+    );
 
+    let map_entity = commands.spawn_empty().id();
+    let mut storage = TileStorage::empty(map_size);
 
-    // Spawn tiles in a grid
-    for y in 0..grid_h as i32 {
-        for x in 0..grid_w as i32 {
-            let world_x = start_x + (x as f32) * TILE_SIZE + TILE_SIZE / 2.;
-            let world_y = start_y - (y as f32) * TILE_SIZE - TILE_SIZE / 2.;
-            if (-32..=32).contains(&(world_y as i32)) {
-                continue;
-            }
+    for row in 0..height {
+        let world_y = win_h / 2. - (row as f32 + 0.5) * TILE_SIZE;
 
-            commands.spawn((
-                Sprite {
-                    color: Color::srgb(0.6, 0.4, 0.2),
-                    custom_size: Some(Vec2::new(TILE_SIZE, TILE_SIZE)),
-                    ..Default::default()
-                },
-                Hitbox(Aabb2d::new(
-                    Vec2::new(world_x, world_y),
-                    Vec2::new(TILE_SIZE / 2., TILE_SIZE / 2.),
-                )),
-                Transform::from_xyz(world_x, world_y, -1.),
-                Tile,
-            ));
+        if (-32..=32).contains(&(world_y as i32)) {
+            continue;
+        }
+
+        for x in 0..width {
+            let world_x = -win_w / 2. + (x as f32 + 0.5) * TILE_SIZE;
+            let position = TilePos {
+                x,
+                y: height - 1 - row,
+            };
+            let tile_entity = commands
+                .spawn((
+                    TileBundle {
+                        position,
+                        tilemap_id: TilemapId(map_entity),
+                        ..Default::default()
+                    },
+                    Sprite {
+                        color: Color::srgb(0.6, 0.4, 0.2),
+                        custom_size: Some(Vec2::new(TILE_SIZE, TILE_SIZE)),
+                        ..Default::default()
+                    },
+                    Hitbox(Aabb2d::new(
+                        Vec2::new(world_x, world_y),
+                        Vec2::splat(TILE_SIZE / 2.),
+                    )),
+                    Transform::from_xyz(world_x, world_y, -1.),
+                    Tile,
+                ))
+                .id();
+
+            storage.set(&position, tile_entity);
         }
     }
+
+    let tile_size = TilemapTileSize {
+        x: TILE_SIZE,
+        y: TILE_SIZE,
+    };
+
+    commands.entity(map_entity).insert((TilemapBundle {
+        grid_size: tile_size.into(),
+        map_type: TilemapType::default(),
+        size: map_size,
+        storage,
+        tile_size,
+        anchor: TilemapAnchor::Center,
+        transform: Transform::from_translation(map_center),
+        ..Default::default()
+    },));
 }
 
 // commands.entity(tile_entity).remove::<Sprite>().remove::<Aabb2d>();
