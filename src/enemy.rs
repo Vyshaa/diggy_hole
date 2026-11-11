@@ -1,5 +1,6 @@
 use crate::{
     background::{TILE_SIZE, Tile},
+    grid_geometry::GridGeometry,
     player::{Hitbox, Player, Velocity},
 };
 use bevy::prelude::*;
@@ -50,52 +51,30 @@ fn player_collision(
     }
 }
 
-fn world_to_grid(world_pos: Vec2, window: &Window) -> (i32, i32) {
-    let win_w = window.resolution.width();
-    let win_h = window.resolution.height();
-    let grid_x = ((win_w / 2. + world_pos.x) / TILE_SIZE).floor() as i32;
-    let grid_y = ((win_h / 2. - world_pos.y) / TILE_SIZE).floor() as i32;
-    (grid_x, grid_y)
-}
-
-#[allow(dead_code)]
-fn grid_to_world((x, y): (i32, i32), window: &Window) -> Vec2 {
-    let win_w = window.resolution.width();
-    let win_h = window.resolution.height();
-    Vec2::new(
-        -win_w / 2.0 + (x as f32 + 0.5) * TILE_SIZE,
-        win_h / 2.0 - (y as f32 + 0.5) * TILE_SIZE,
-    )
-}
-
 fn find_path(
-    start: (i32, i32),
-    goal: (i32, i32),
+    start: IVec2,
+    goal: IVec2,
     tile_query: Query<(&Hitbox, &Transform), (With<Tile>, Without<Enemy>)>,
-    window: &Window,
-) -> Option<Vec<(i32, i32)>> {
-    let invalid_tiles: Vec<(i32, i32)> = tile_query
+    geometry: &Res<GridGeometry>,
+) -> Option<Vec<IVec2>> {
+    let blocked: Vec<IVec2> = tile_query
         .iter()
-        .map(|(_, tile_pos)| world_to_grid(tile_pos.translation.xy(), window))
+        .map(|(_, tile_pos)| geometry.world_to_grid(tile_pos.translation.xy()).unwrap())
         .collect();
     astar(
         &start,
-        |&(x, y)| {
+        |&pos| {
             [
-                (x, y + 1),
-                (x, y - 1),
-                (x - 1, y),
-                (x + 1, y),
-                (x + 1, y + 1),
-                (x - 1, y + 1),
-                (x + 1, y - 1),
-                (x - 1, y - 1),
+                pos + IVec2::X,
+                pos - IVec2::X,
+                pos + IVec2::Y,
+                pos - IVec2::Y,
             ]
             .into_iter()
-            .filter(|(x, y)| !invalid_tiles.contains(&(*x, *y)))
+            .filter(|next| !blocked.contains(next))
             .map(|p| (p, 1)) // each move costs 1
         },
-        |&(x, y)| x.abs_diff(goal.0) + y.abs_diff(goal.1), // Manhattan distance
+        |&pos| pos.x.abs_diff(goal.x) + pos.y.abs_diff(goal.y), // Manhattan distance
         |&p| p == goal,
     )
     .map(|(path, _cost)| path)
@@ -106,24 +85,33 @@ fn move_enemy(
     player_query: Single<&Transform, (With<Player>, Without<Enemy>)>,
     mut enemy_query: Query<(&mut Transform, &mut Hitbox, &Velocity), With<Enemy>>,
     tile_query: Query<(&Hitbox, &Transform), (With<Tile>, Without<Enemy>)>,
-    window: Single<&Window>,
+    geometry: Res<GridGeometry>,
 ) {
     let player_pos = player_query.into_inner().translation;
+    let Some(player_pos) = geometry.world_to_grid(player_pos.xy()) else {
+        return;
+    };
+
     for (mut transform, mut hitbox, velocity) in enemy_query.iter_mut() {
         let dt = velocity.0 * time.delta_secs();
 
-        let enemy_pos = world_to_grid(transform.translation.xy(), &window);
-        let player_pos = world_to_grid(player_pos.xy(), &window);
-        let direction = find_path(enemy_pos, player_pos, tile_query, &window);
-        let direction = direction
-            .and_then(|path| path.get(1).copied())
-            .map(|(x, y)| Vec2::new((x - enemy_pos.0) as f32, -(y - enemy_pos.1) as f32))
-            .unwrap()
-            .extend(0.);
+        let Some(enemy_pos) = geometry.world_to_grid(transform.translation.xy()) else {
+            continue;
+        };
+
+        let Some(path) = find_path(enemy_pos, player_pos, tile_query, &geometry) else {
+            continue;
+        };
+        let Some(next) = path.get(1) else { continue };
+
+        let direction = Vec2::new(
+            (next.x - enemy_pos.x) as f32,
+            -(next.y - enemy_pos.y) as f32,
+        );
         let movement = direction.normalize_or_zero() * dt;
 
-        transform.translation += movement;
-        hitbox.0.translate_by(movement.xy());
+        transform.translation += movement.extend(0.);
+        hitbox.0.translate_by(movement);
     }
 }
 

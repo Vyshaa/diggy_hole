@@ -1,7 +1,10 @@
 use bevy::prelude::*;
 use bevy_ecs_tilemap::prelude::*;
 
-use crate::player::{Hitbox, Player};
+use crate::{
+    grid_geometry::GridGeometry,
+    player::{Hitbox, Player},
+};
 
 #[derive(Component)]
 pub struct Tile;
@@ -15,20 +18,17 @@ pub fn setup_background(mut commands: Commands, window: Single<&Window>) {
     let height = (win_h / TILE_SIZE) as u32;
 
     let map_entity = commands.spawn_empty().id();
+    let geometry = GridGeometry::from_window(&window);
+    commands.insert_resource(geometry);
 
     for row in 0..height {
-        let world_y = win_h / 2. - (row as f32 + 0.5) * TILE_SIZE;
-
-        if (-32..=32).contains(&(world_y as i32)) {
-            continue;
-        }
-
         for col in 0..width {
-            let world_x = -win_w / 2. + (col as f32 + 0.5) * TILE_SIZE;
-            let position = TilePos {
-                x: col,
-                y: height - 1 - row,
-            };
+            let world_pos = geometry.tile_center(col, row);
+            if (-32..=32).contains(&(world_pos.y as i32)) {
+                continue;
+            }
+
+            let position = geometry.to_tile_pos(col, row);
             commands.spawn((
                 TileBundle {
                     position,
@@ -40,11 +40,8 @@ pub fn setup_background(mut commands: Commands, window: Single<&Window>) {
                     custom_size: Some(Vec2::new(TILE_SIZE, TILE_SIZE)),
                     ..Default::default()
                 },
-                Hitbox(Aabb2d::new(
-                    Vec2::new(world_x, world_y),
-                    Vec2::splat(TILE_SIZE / 2.),
-                )),
-                Transform::from_xyz(world_x, world_y, -1.),
+                Hitbox(Aabb2d::new(world_pos, Vec2::splat(TILE_SIZE / 2.))),
+                Transform::from_translation(world_pos.extend(-1.)),
                 Tile,
             ));
         }

@@ -1,5 +1,6 @@
 pub mod background;
 pub mod enemy;
+pub mod grid_geometry;
 pub mod player;
 pub mod ui;
 
