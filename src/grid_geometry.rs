@@ -56,4 +56,8 @@ impl GridGeometry {
             y: self.rows - 1 - row,
         }
     }
+
+    pub fn in_bounds(self, vec: &IVec2) -> bool {
+        vec.x >= 0 && vec.y >= 0 && vec.x < self.columns() as i32 && vec.y < self.rows() as i32
+    }
 }

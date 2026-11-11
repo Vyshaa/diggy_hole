@@ -54,13 +54,15 @@ fn player_collision(
 fn find_path(
     start: IVec2,
     goal: IVec2,
-    tile_query: Query<(&Hitbox, &Transform), (With<Tile>, Without<Enemy>)>,
+    enemy_world_pos: Vec2,
+    enemy_hitbox: Aabb2d,
+    tile_hitboxes: &[Aabb2d],
     geometry: &Res<GridGeometry>,
 ) -> Option<Vec<IVec2>> {
-    let blocked: Vec<IVec2> = tile_query
-        .iter()
-        .map(|(_, tile_pos)| geometry.world_to_grid(tile_pos.translation.xy()).unwrap())
-        .collect();
+    let hitbox = |next: &IVec2| {
+        let candidate_center = geometry.tile_center(next.x as u32, next.y as u32);
+        enemy_hitbox.translated_by(candidate_center - enemy_world_pos)
+    };
     astar(
         &start,
         |&pos| {
@@ -71,11 +73,16 @@ fn find_path(
                 pos - IVec2::Y,
             ]
             .into_iter()
-            .filter(|next| !blocked.contains(next))
-            .map(|p| (p, 1)) // each move costs 1
+            .filter(|next| {
+                geometry.in_bounds(next)
+                    && !tile_hitboxes
+                        .iter()
+                        .any(|tile| hitbox(next).intersects(tile))
+            })
+            .map(|next| (next, 1))
         },
-        |&pos| pos.x.abs_diff(goal.x) + pos.y.abs_diff(goal.y), // Manhattan distance
-        |&p| p == goal,
+        |&pos| pos.x.abs_diff(goal.x) + pos.y.abs_diff(goal.y),
+        |&pos| pos == goal,
     )
     .map(|(path, _cost)| path)
 }
@@ -91,6 +98,7 @@ fn move_enemy(
     let Some(player_pos) = geometry.world_to_grid(player_pos.xy()) else {
         return;
     };
+    let tile_hitboxes: Vec<Aabb2d> = tile_query.iter().map(|(hitbox, _)| hitbox.0).collect();
 
     for (mut transform, mut hitbox, velocity) in enemy_query.iter_mut() {
         let dt = velocity.0 * time.delta_secs();
@@ -99,7 +107,14 @@ fn move_enemy(
             continue;
         };
 
-        let Some(path) = find_path(enemy_pos, player_pos, tile_query, &geometry) else {
+        let Some(path) = find_path(
+            enemy_pos,
+            player_pos,
+            transform.translation.xy(),
+            hitbox.0,
+            &tile_hitboxes,
+            &geometry,
+        ) else {
             continue;
         };
         let Some(next) = path.get(1) else { continue };
