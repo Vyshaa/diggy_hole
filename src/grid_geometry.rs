@@ -69,9 +69,9 @@ impl InBounds<IVec2> for GridGeometry {
 }
 impl InBounds<Vec2> for GridGeometry {
     fn in_bounds(self, vec: &Vec2) -> bool {
-        vec.x >= 0.
-            && vec.y >= 0.
-            && vec.x < self.columns() as f32 * TILE_SIZE
-            && vec.y < self.rows() as f32 * TILE_SIZE
+        let Some(vec) = self.world_to_grid(*vec) else {
+            return false;
+        };
+        self.in_bounds(&vec)
     }
 }

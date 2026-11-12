@@ -1,5 +1,7 @@
 use bevy::prelude::*;
 
+use crate::grid_geometry::{GridGeometry, InBounds};
+
 #[derive(Component)]
 pub struct Player;
 
@@ -23,7 +25,7 @@ impl PlayerBundle {
         let cat = asset_server.load("cat.png");
         Self {
             player: Player,
-            velocity: Velocity(100.),
+            velocity: Velocity(200.),
             sprite: Sprite {
                 image: cat.clone(),
                 custom_size: Some(Vec2::new(64., 64.)),
@@ -65,6 +67,7 @@ pub fn move_player(
     time: Res<Time>,
     query: Single<(&mut Sprite, &mut Transform, &mut Hitbox, &Velocity), With<Player>>,
     keyboard_input: Res<ButtonInput<KeyCode>>,
+    geometry: Res<GridGeometry>,
 ) {
     let (mut sprite, mut transform, mut hitbox, velocity) = query.into_inner();
     let dt = velocity.0 * time.delta_secs();
@@ -86,7 +89,11 @@ pub fn move_player(
 
     direction = direction.normalize_or_zero();
     let movement = direction * dt;
-    transform.translation += movement.extend(0.);
+    let next = transform.translation.xy() + movement;
+    if !geometry.in_bounds(&next) {
+        return;
+    }
+    transform.translation = next.extend(0.);
     hitbox.0.translate_by(movement);
 }
 
