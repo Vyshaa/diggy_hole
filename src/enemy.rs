@@ -1,6 +1,6 @@
 use crate::{
-    background::{TILE_SIZE, Tile},
-    grid_geometry::GridGeometry,
+    background::Tile,
+    grid_geometry::{GridGeometry, InBounds},
     player::{Hitbox, Player, Velocity},
 };
 use bevy::prelude::*;
@@ -19,7 +19,7 @@ struct EnemyBundle {
 }
 
 impl EnemyBundle {
-    fn new() -> Self {
+    fn new(pos: f32) -> Self {
         Self {
             enemy: Enemy,
             velocity: Velocity(80.),
@@ -28,14 +28,15 @@ impl EnemyBundle {
                 custom_size: Some(Vec2::new(64., 64.)),
                 ..Default::default()
             },
-            transform: Transform::from_xyz(-600., 0., 0.),
-            hitbox: Hitbox(Aabb2d::new(Vec2::new(-600., 0.), Vec2::new(32.0, 32.0))),
+            transform: Transform::from_xyz(pos, 0., 0.),
+            hitbox: Hitbox(Aabb2d::new(Vec2::new(pos, 0.), Vec2::new(32.0, 32.0))),
         }
     }
 }
 
 fn setup_enemies(mut commands: Commands) {
-    commands.spawn(EnemyBundle::new());
+    commands.spawn(EnemyBundle::new(-600.));
+    commands.spawn(EnemyBundle::new(600.));
 }
 
 fn player_collision(
